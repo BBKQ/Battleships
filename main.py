@@ -151,7 +151,7 @@ def update_grid(next_grid, occupied_spaces, sunken_spaces, shots_fired, grid_own
         for x in range(GRID_HEIGHT): # Why does it work with flipped x y?
             if [x, y] in sunken_spaces:
                 column.append("!")
-            elif [x, y] in occupied_spaces: #and grid_owner == "player":
+            elif [x, y] in occupied_spaces and grid_owner == "player":
                 column.append("V")
             elif [x, y] in shots_fired:
                 column.append("X")
