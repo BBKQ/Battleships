@@ -308,6 +308,7 @@ def computer_hard():
     pass
 
 def computer_god():
+    """This just shoots your ships down one by one. Why would anyone play that?"""
     pass
 
 def computer_move(x, y):
