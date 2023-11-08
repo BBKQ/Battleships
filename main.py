@@ -4,16 +4,18 @@ from print_enchancer import *
 from ships import Ship
 import random
 import sys
+import copy
  
 GRID_LENGTH = 10
 GRID_HEIGHT = 10
 X_COORDINATES = "ABCDEFGHIJ"
 Y_COORDINATES = "0123456789"
-
-game_mode = "easy"
+ 
+game_mode = ""
 game_over = False
 winner = ""
-
+did_opponent_hit = False
+ 
 player_next_grid = []
 player_occupied_spaces = []
 player_sunken_spaces = []
@@ -22,6 +24,7 @@ opponent_next_grid = []
 opponent_occupied_spaces = []
 opponent_sunken_spaces = []
 opponent_shots_fired = []
+opponent_known_ships = []
  
 player_destroyer         = Ship("Destroyer", 2, "player")
 player_cruiser           = Ship("Cruiser", 3, "player")
@@ -45,9 +48,9 @@ opponent_ships = [opponent_destroyer,
                   opponent_submarine,
                   opponent_battleship, 
                   opponent_aircraftCarrier]
-
+ 
 starting_message = ("""Welcome to Battleships!
-                    
+ 
 Rules are simple:
 Both you and your opponent have a 10x10 squares grid, on which you place your ships:
 2 spaces big Destroyer,
@@ -55,30 +58,53 @@ Both you and your opponent have a 10x10 squares grid, on which you place your sh
 3 spaces big Submarine,
 4 spaces big Battleship,
 and 5 spaces big Aircraft Career.
-                    
+ 
 You start by positioning your ships on your board. Ships can touch, but cannot overlap.
 After that, you are presented two boards: one yours, with ships shown to you (ships are represented by "V" on the board),
 And second - opponents' - who's ships are hidden.
 You both take turns on shooting one square. 
 After shooting, you get the info whether your shot hit(represented by "!") or missed(represented by "X")
 After taking down a ship, you get the info that the ship has sunk.
-                    
+ 
 Your goal is to take down all opponents' ships before they take down all yours!
 You can play against a computer, or access a mode where the computer will help you out on winning against others,
 Using the most efficient ways!
 """)
  
-def square_validator():
+def square_validator(move):
     while True:
-        move = input()
         if len(move) != 2:
             slow_print("This is not a valid square. Try again.")
-        elif move.upper()[0] in X_COORDINATES and move[1] in Y_COORDINATES:
+            move = input()
+        if move.upper()[0] in X_COORDINATES and move[1] in Y_COORDINATES:
             x, y = X_COORDINATES.find(move[0].upper()), int(move[1])
-            return x, y
+            square_valid = True
+            return x, y, square_valid
+        else:
+            square_valid = False
+            return 0, 0, square_valid
+ 
+def check_coordinates():
+    move = input()
+    if len(move) == 2:
+        xA, yA, validA = square_validator(move)
+        slow_print("Where do you want it to end?")
+        move = input()
+        xB, yB, validB = square_validator(move)
+        return xA, yA, xB, yB
+    elif len(move) == 4:
+        A, B = move[0:2], move[2:4]
+        xA, yA, validA = square_validator(A)
+        xB, yB, validB = square_validator(B)
+        if validA and validB:      
+            return xA, yA, xB, yB
         else:
             slow_print("This is not a valid square. Try again.")
-
+            check_coordinates()
+    else:
+        slow_print("This is not a valid square. Try again.")
+        check_coordinates()
+ 
 def player_ship_placement(ship_list):
     for ship in ship_list:
         xA, yA, xB, yB, is_horizontal = ship_placement_validator(ship)
@@ -91,15 +117,12 @@ def ship_placement_validator(ship):
     slow_print("\n{} is {} spaces big.".format(ship.name, ship.size))
     while True:
         slow_print("\nWhere do you want it to start?")
-        xA, yA = square_validator()
-        slow_print("\nWhere do you want it to end?")
-        xB, yB = square_validator() 
- 
+        xA, yA, xB, yB = check_coordinates()
         if xA == xB and yA != yB:
             if abs(yA - yB) == ship.size - 1:
                 is_horizontal = False
                 add_ship_coordinates(xA, yA, xB, yB, is_horizontal, player_occupied_spaces, ship)
-                slow_print(f"{ship.name}'s coordinates are {X_COORDINATES[xA]+str(yA), X_COORDINATES[xB]+str(yB)}")
+                slow_print(f"{ship.name}'s coordinates are [{X_COORDINATES[xA]+str(yA)}, {X_COORDINATES[xB]+str(yB)}]")
                 return xA, yA, xB, yB, is_horizontal
             else:
                 slow_print("{} can't be placed that way. Remember, it is {} spaces big.".format(ship.name, ship.size))               
@@ -107,7 +130,7 @@ def ship_placement_validator(ship):
             if abs(xA - xB) == ship.size - 1:
                 is_horizontal = True
                 add_ship_coordinates(xA, yA, xB, yB, is_horizontal, player_occupied_spaces, ship)
-                slow_print(f"{ship.name}'s coordinates are {X_COORDINATES[xA]+str(yA), X_COORDINATES[xB]+str(yB)}")
+                slow_print(f"{ship.name}'s coordinates are [{X_COORDINATES[xA]+str(yA)}, {X_COORDINATES[xB]+str(yB)}]")
                 return xA, yA, xB, yB, is_horizontal              
             else:
                 slow_print("{} can't be placed that way. Remember, it is {} spaces big.".format(ship.name, ship.size))          
@@ -132,11 +155,12 @@ def add_ship_coordinates(xA, yA, xB, yB, is_horizontal, occupied_spaces, ship):
     if placement_valid:
         for coordinate in spaces:
             occupied_spaces.append(coordinate)
-            ship.coordinates.append(coordinate)
+            ship.initial_coordinates.append(coordinate)
+            ship.afloat_coordinates.append(coordinate)
     else:
         occupied_spaces = []
         slow_print("Ships can not hit each other! Please, try again placing them somewhere else. It's ok if your ships touch.")
-        player_ship_placement()                  
+        player_ship_placement(player_ships)                  
  
 def check_collision(spaces, occupied_spaces):
     for coordinate in spaces:
@@ -192,18 +216,16 @@ def computer_ship_distribution(occupied_spaces):
                 else:
                     xB = xA - ship.size
                 yB = yA
+                if xA > xB:
+                    xA, xB = xB, xA
+                for i in range(xA, xB):
+                    spaces.append([i, yA])
             else:
                 xB = xA
                 if yA + ship.size < len(Y_COORDINATES):
                    yB = yA + ship.size
                 else:
                     yB = yA - ship.size
-            if is_horizontal:
-                if xA > xB:
-                    xA, xB = xB, xA
-                for i in range(xA, xB):
-                    spaces.append([i, yA])
-            else:
                 if yA > yB:
                     yA, yB = yB, yA
                 for i in range (yA, yB):
@@ -212,20 +234,25 @@ def computer_ship_distribution(occupied_spaces):
             if placement_valid:
                 for coordinate in spaces:
                     occupied_spaces.append(coordinate)
-                    ship.coordinates.append(coordinate)
+                    ship.initial_coordinates.append(coordinate)
+                    ship.afloat_coordinates.append(coordinate)
                 break
             else:
                 continue
-
+ 
 def player_move():
     while True:
-        xS, yS = square_validator()
+        slow_print("Where do you want to shoot?")
+        move = input()
+        xS, yS, validS = square_validator(move)
+        if not validS:
+            continue
         if [xS, yS] in player_shots_fired:
             slow_print("You have already shot here. Try somewhere else.")
             continue
         else:
             break
-
+ 
     slow_print("You shot on field {}.".format(X_COORDINATES[xS]+str(yS)))
     if [xS, yS] in opponent_occupied_spaces:
         slow_print("It's a hit!")
@@ -234,25 +261,25 @@ def player_move():
     else:
         slow_print("It's a miss!")
         player_shots_fired.append([xS, yS])
-        
+ 
 def check_if_game_over():
     global winner
     sunk_ships = 0
     for ship in opponent_ships:
-        if ship.coordinates == []:
+        if ship.afloat_coordinates == []:
             sunk_ships += 1
         if sunk_ships == 5:
             winner = "player"
             return True
     sunk_ships = 0
     for ship in player_ships:
-        if ship.coordinates == []:
+        if ship.afloat_coordinates == []:
             sunk_ships += 1
         if sunk_ships == 5:
             winner = "opponent"
             return True
     return False
-
+ 
 def select_mode():
     slow_print("""This battleship game contains four modes:
  
@@ -286,50 +313,146 @@ def get_mode(game_mode):
             xS, yS = computer_medium()
         case "hard":
             xS, yS = computer_hard()
-    
+        case "god":
+            xS, yS = computer_god()
     return xS, yS
-
+ 
 def computer_easy():
     """This is just dumb random shooting computer"""
-
+ 
     while True:
         xS, yS = random.randint(0, len(X_COORDINATES)-1), random.randint(0, len(Y_COORDINATES)-1)
         if [xS, yS] in opponent_shots_fired:
             continue
-        opponent_shots_fired.append([xS, yS])
         return xS, yS
-    
+ 
 def computer_medium():
     """This uses a hunt and target algorithm."""
-    pass
+    global opponent_known_ships
+    
+    opponent_unknown_ships = copy.deepcopy(player_sunken_spaces)
 
+    vectors = ["up", "down", "left", "right"]
+
+    for coordinate in opponent_unknown_ships:
+        if coordinate in opponent_known_ships:
+            opponent_unknown_ships.remove(coordinate)
+
+    for ship in player_ships:
+        if not ship.afloat:
+            for coordinate in ship.initial_coordinates:
+                if coordinate not in opponent_known_ships:
+                    opponent_known_ships.append(coordinate)
+                if coordinate in opponent_unknown_ships:
+                    opponent_unknown_ships.remove(coordinate)
+
+    while not opponent_unknown_ships:
+        print("using hunt")
+        xS, yS = random.randint(0, len(X_COORDINATES)-1), random.randint(0, len(Y_COORDINATES)-1)
+        if [xS, yS] in opponent_shots_fired:
+            continue
+        return xS, yS
+    
+    target_square = -1
+    while opponent_unknown_ships:
+        print(vectors)
+        print("using target")
+        current_target = copy.copy(opponent_unknown_ships[target_square])
+        print("initial target:")
+        print(current_target)
+        if not vectors:
+            vectors = ["up", "down", "left", "right"]
+            target_square += 1
+            continue
+        vector = random.choice(vectors)
+        match vector:
+            case "up":
+                print("checking up")
+                current_target[1] = current_target[1] - 1
+                if current_target[1] < 0:
+                    vectors.remove(vector)
+                    continue
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                print("calculated target:")
+                print(current_target)
+                return current_target[0], current_target[1] 
+            case "down":
+                print("checking down")
+                current_target[1] = current_target[1] + 1
+                if current_target[1] > 9:
+                    vectors.remove(vector)
+                    continue
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                print("calculated target:")
+                print(current_target)
+                return current_target[0], current_target[1]   
+            case "left":
+                print("checking left")
+                current_target[0] = current_target[0] - 1
+                if current_target[0] < 0:
+                    vectors.remove(vector)
+                    continue  
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                print("calculated target:")
+                print(current_target)
+                return current_target[0], current_target[1] 
+            case "right":
+                print("checking right")
+                current_target[0] = current_target[0] + 1
+                if current_target[0] > 9:
+                    vectors.remove(vector)
+                    continue
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                print("calculated target:")
+                print(current_target)
+                return current_target[0], current_target[1] 
+ 
 def computer_hard():
     """This uses hunt and target algorithm combined with probability heatmap."""
     pass
-
+ 
 def computer_god():
     """This just shoots your ships down one by one. Why would anyone play that?"""
-    pass
+ 
+    while True:
+        attack = random.randint(0,len(player_occupied_spaces)-1)
+        if player_occupied_spaces[attack] not in player_sunken_spaces:
+            xS, yS = player_occupied_spaces[attack]
+            return xS, yS
 
 def computer_move(x, y):
+    global did_opponent_hit, player_sunken_spaces 
     slow_print("Computer shot on field {}.".format(X_COORDINATES[x]+str(y)))
     if [x, y] in player_occupied_spaces:
         slow_print("It's a hit!")
         player_sunken_spaces.append([x, y])
         opponent_shots_fired.append([x, y])
+        did_opponent_hit = True
     else:
         slow_print("It's a miss!")
         opponent_shots_fired.append([x, y])
+        did_opponent_hit = False
 
+def previously_hit(target):
+    return True if target in opponent_shots_fired else False
+    
 def check_if_ship_sunk(ship_list, shots_fired):
     for ship in ship_list:
-        for coordinate in ship.coordinates:
+        for coordinate in ship.afloat_coordinates:
             if coordinate in shots_fired:
-                ship.coordinates.remove(coordinate)
-        if ship.coordinates == [] and ship.afloat:
+                ship.afloat_coordinates.remove(coordinate)
+        if ship.afloat_coordinates == [] and ship.afloat:
             ship.afloat = False
             slow_print("{}'s {} has sunk!".format(ship.owner.capitalize(), ship.name))
-
+ 
 def game_round():
     global game_over
     player_move()
@@ -341,24 +464,27 @@ def game_round():
     update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, opponent_shots_fired, "player")
     print()
     update_grid(opponent_next_grid, opponent_occupied_spaces, opponent_sunken_spaces, player_shots_fired, "opponent")
-
+ 
 if __name__ == "__main__":
-
+ 
     for x in range(GRID_LENGTH):
         column = []
         for y in range(GRID_HEIGHT):
             column.append("o")        
         player_next_grid.append(column)
         opponent_next_grid.append(column)
-    
-    slow_print(starting_message)
-    
+
+
+    #slow_print(starting_message)
+    #game_mode = select_mode()
+    game_mode = "medium"
     computer_ship_distribution(opponent_occupied_spaces)
     update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, player_shots_fired, "player")
+    slow_print("\nYou can enter one or both coordinates (without spaces) of ship at a time.")
     player_ship_placement(player_ships)
-
-    while game_over is False:
+ 
+    while not game_over:
         game_round()
+        print(player_sunken_spaces)
     print("GOWNO KUWA")
     sys.exit()
- 

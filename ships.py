@@ -4,5 +4,6 @@ class Ship:
         self.name = name
         self.size = size
         self.owner = owner
-        self.coordinates = []
+        self.initial_coordinates = []
+        self.afloat_coordinates = []
         self.afloat = True
