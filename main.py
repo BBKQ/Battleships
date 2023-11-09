@@ -146,12 +146,12 @@ def add_ship_coordinates(xA, yA, xB, yB, is_horizontal, occupied_spaces, ship):
         if xA > xB:
             xA, xB = xB, xA
         for i in range(xA, xB+1):
-            spaces.append([i, yA])
+            spaces.append((i, yA))
     else:
         if yA > yB:
             yA, yB = yB, yA
         for i in range (yA, yB+1):
-            spaces.append([xA, i])
+            spaces.append((xA, i))
     placement_valid = check_collision(spaces, player_occupied_spaces)
     if placement_valid:
         for coordinate in spaces:
@@ -174,11 +174,11 @@ def update_grid(next_grid, occupied_spaces, sunken_spaces, shots_fired, grid_own
     for y in range(GRID_LENGTH): #  ???
         column = []
         for x in range(GRID_HEIGHT): # Why does it work with flipped x y?
-            if [x, y] in sunken_spaces:
+            if (x, y) in sunken_spaces:
                 column.append("!")
-            elif [x, y] in occupied_spaces and grid_owner == "player":
+            elif (x, y) in occupied_spaces and grid_owner == "player":
                 column.append("V")
-            elif [x, y] in shots_fired:
+            elif (x, y) in shots_fired:
                 column.append("X")
             else:
                 column.append("o")
@@ -220,7 +220,7 @@ def computer_ship_distribution(occupied_spaces):
                 if xA > xB:
                     xA, xB = xB, xA
                 for i in range(xA, xB):
-                    spaces.append([i, yA])
+                    spaces.append((i, yA))
             else:
                 xB = xA
                 if yA + ship.size < len(Y_COORDINATES):
@@ -230,7 +230,7 @@ def computer_ship_distribution(occupied_spaces):
                 if yA > yB:
                     yA, yB = yB, yA
                 for i in range (yA, yB):
-                    spaces.append([xA, i])
+                    spaces.append((xA, i))
             placement_valid = check_collision(spaces, opponent_occupied_spaces)
             if placement_valid:
                 for coordinate in spaces:
@@ -248,20 +248,20 @@ def player_move():
         xS, yS, validS = square_validator(move)
         if not validS:
             continue
-        if [xS, yS] in player_shots_fired:
+        if (xS, yS) in player_shots_fired:
             slow_print("You have already shot here. Try somewhere else.")
             continue
         else:
             break
  
     slow_print("You shot on field {}.".format(X_COORDINATES[xS]+str(yS)))
-    if [xS, yS] in opponent_occupied_spaces:
+    if (xS, yS) in opponent_occupied_spaces:
         slow_print("It's a hit!")
-        opponent_sunken_spaces.append([xS, yS])
-        player_shots_fired.append([xS, yS])
+        opponent_sunken_spaces.append((xS, yS))
+        player_shots_fired.append((xS, yS))
     else:
         slow_print("It's a miss!")
-        player_shots_fired.append([xS, yS])
+        player_shots_fired.append((xS, yS))
  
 def check_if_game_over():
     global winner
@@ -323,7 +323,7 @@ def computer_easy():
  
     while True:
         xS, yS = random.randint(0, len(X_COORDINATES)-1), random.randint(0, len(Y_COORDINATES)-1)
-        if [xS, yS] in opponent_shots_fired:
+        if (xS, yS) in opponent_shots_fired:
             continue
         return xS, yS
  
@@ -331,7 +331,7 @@ def computer_medium():
     """This uses a hunt and target algorithm."""
     global opponent_known_ships
  
-    opponent_unknown_ships = copy.deepcopy(player_sunken_spaces) #  This single line was the hardest part in the whole project.
+    opponent_unknown_ships = copy.deepcopy(player_sunken_spaces)  # This single line was the hardest part in the whole project.
 
     vectors = ["up", "down", "left", "right"]
  
@@ -349,7 +349,7 @@ def computer_medium():
  
     while not opponent_unknown_ships:
         xS, yS = random.randint(0, len(X_COORDINATES)-1), random.randint(0, len(Y_COORDINATES)-1)
-        if [xS, yS] in opponent_shots_fired:
+        if (xS, yS) in opponent_shots_fired:
             continue
         return xS, yS
  
@@ -357,7 +357,7 @@ def computer_medium():
     did_deduce = False
 
     while opponent_unknown_ships:
-        current_target = copy.copy(opponent_unknown_ships[target_square])
+        current_target = copy.copy(list(opponent_unknown_ships[target_square]))
         if len(opponent_unknown_ships) >= 2:
             if abs(current_target[0] - opponent_unknown_ships[target_square-1][0]) >= 1 and not did_deduce:
                 vectors = ["left", "right"]
@@ -369,7 +369,6 @@ def computer_medium():
         if not vectors:
             vectors = ["up", "down", "left", "right"]
             target_square += 1
-            did_deduce = False
             continue
  
         vector = random.choice(vectors)
@@ -379,7 +378,7 @@ def computer_medium():
                 if current_target[1] < 0:
                     vectors.remove(vector)
                     continue
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                if (current_target[0], current_target[1]) in opponent_shots_fired:
                     vectors.remove(vector)
                     continue
                 return current_target[0], current_target[1] 
@@ -388,7 +387,7 @@ def computer_medium():
                 if current_target[1] > 9:
                     vectors.remove(vector)
                     continue
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                if (current_target[0], current_target[1]) in opponent_shots_fired:
                     vectors.remove(vector)
                     continue
                 return current_target[0], current_target[1]   
@@ -397,7 +396,7 @@ def computer_medium():
                 if current_target[0] < 0:
                     vectors.remove(vector)
                     continue  
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                if (current_target[0], current_target[1])in opponent_shots_fired:
                     vectors.remove(vector)
                     continue
                 return current_target[0], current_target[1] 
@@ -406,7 +405,7 @@ def computer_medium():
                 if current_target[0] > 9:
                     vectors.remove(vector)
                     continue
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                if (current_target[0], current_target[1]) in opponent_shots_fired:
                     vectors.remove(vector)
                     continue
                 return current_target[0], current_target[1] 
@@ -429,13 +428,55 @@ def computer_hard():
                     opponent_unknown_ships.remove(coordinate)
 
     if opponent_unknown_ships:
-        computer_medium()
+        xS, yS = computer_medium()
+        return xS, yS
     else:
+
         heatmap = {}
+        availivble_spots = set()
+        denied_spots = []
+
         for x in range(GRID_LENGTH):
             for y in range(GRID_HEIGHT):
-                map.update({(x, y): 0})
+                heatmap.update({(x, y): 0})
+        for coordinate in heatmap.keys():
+            if coordinate in opponent_shots_fired:
+                denied_spots.append(coordinate)
+            else:
+                availivble_spots.add(coordinate)
+        for coordinate in denied_spots:
+            del heatmap[coordinate]
+            
+        for ship in player_ships:
+            if ship.afloat:
 
+                for x in range(GRID_LENGTH): #  Get horizontal heatmap
+                    for y in range(GRID_HEIGHT):
+                        ship_coordinates = set()
+                        coordinate_shift = 0
+                        for _ in range(ship.size):
+                            coordinate = (x, (y+coordinate_shift))
+                            ship_coordinates.add(coordinate)
+                            coordinate_shift += 1
+                        if ship_coordinates.issubset(availivble_spots):
+                            for coordinate in ship_coordinates:
+                                heatmap[coordinate] += 1
+
+                for y in range(GRID_HEIGHT): #  Get vertical heatmap
+                    for x in range(GRID_LENGTH):
+                        ship_coordinates = set()
+                        coordinate_shift = 0
+                        for _ in range(ship.size):
+                            coordinate = ((x+coordinate_shift), y)
+                            ship_coordinates.add(coordinate)
+                            coordinate_shift += 1
+                        if ship_coordinates.issubset(availivble_spots):
+                            for coordinate in ship_coordinates:
+                                heatmap[coordinate] += 1
+
+        max_heat = [coordinate for coordinate, heat in heatmap.items() if heat == max(heatmap.values())]
+        target_square = random.choice(max_heat)
+        return target_square[0], target_square[1]
  
 def computer_god():
     """This just shoots your ships down one by one. Why would anyone play that?"""
@@ -449,14 +490,14 @@ def computer_god():
 def computer_move(x, y):
     global did_opponent_hit, player_sunken_spaces 
     slow_print("Computer shot on field {}.".format(X_COORDINATES[x]+str(y)))
-    if [x, y] in player_occupied_spaces:
+    if (x, y) in player_occupied_spaces:
         slow_print("It's a hit!")
-        player_sunken_spaces.append([x, y])
-        opponent_shots_fired.append([x, y])
+        player_sunken_spaces.append((x, y))
+        opponent_shots_fired.append((x, y))
         did_opponent_hit = True
     else:
         slow_print("It's a miss!")
-        opponent_shots_fired.append([x, y])
+        opponent_shots_fired.append((x, y))
         did_opponent_hit = False
  
 def previously_hit(target):
@@ -492,6 +533,7 @@ if __name__ == "__main__":
         player_next_grid.append(column)
         opponent_next_grid.append(column)
  
+ 
     slow_print(starting_message)
     game_mode = select_mode()
     computer_ship_distribution(opponent_occupied_spaces)
@@ -501,6 +543,6 @@ if __name__ == "__main__":
  
     while not game_over:
         game_round()
-    print("And the winner is{}".format{winner})
+    print("And the winner is {}!".format(winner))
     sys.exit()
  
