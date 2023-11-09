@@ -63,7 +63,7 @@ You start by positioning your ships on your board. Ships can touch, but cannot o
 After that, you are presented two boards: one yours, with ships shown to you (ships are represented by "V" on the board),
 And second - opponents' - who's ships are hidden.
 You both take turns on shooting one square. 
-After shooting, you get the info whether your shot hit(represented by "!") or missed(represented by "X")
+After shooting, you get the info whether your shot hit(represented by "!"), or missed(represented by "X").
 After taking down a ship, you get the info that the ship has sunk.
  
 Your goal is to take down all opponents' ships before they take down all yours!
@@ -85,6 +85,7 @@ def square_validator(move):
             return 0, 0, square_valid
  
 def check_coordinates():
+    move = ""
     move = input()
     if len(move) == 2:
         xA, yA, validA = square_validator(move)
@@ -329,15 +330,96 @@ def computer_easy():
 def computer_medium():
     """This uses a hunt and target algorithm."""
     global opponent_known_ships
-    
-    opponent_unknown_ships = copy.deepcopy(player_sunken_spaces)
+ 
+    opponent_unknown_ships = copy.deepcopy(player_sunken_spaces) #  This single line was the hardest part in the whole project.
 
     vectors = ["up", "down", "left", "right"]
+ 
+    for coordinate in opponent_unknown_ships:
+        if coordinate in opponent_known_ships:
+            opponent_unknown_ships.remove(coordinate)
+ 
+    for ship in player_ships:
+        if not ship.afloat:
+            for coordinate in ship.initial_coordinates:
+                if coordinate not in opponent_known_ships:
+                    opponent_known_ships.append(coordinate)
+                if coordinate in opponent_unknown_ships:
+                    opponent_unknown_ships.remove(coordinate)
+ 
+    while not opponent_unknown_ships:
+        xS, yS = random.randint(0, len(X_COORDINATES)-1), random.randint(0, len(Y_COORDINATES)-1)
+        if [xS, yS] in opponent_shots_fired:
+            continue
+        return xS, yS
+ 
+    target_square = -1
+    did_deduce = False
+
+    while opponent_unknown_ships:
+        current_target = copy.copy(opponent_unknown_ships[target_square])
+        if len(opponent_unknown_ships) >= 2:
+            if abs(current_target[0] - opponent_unknown_ships[target_square-1][0]) >= 1 and not did_deduce:
+                vectors = ["left", "right"]
+                did_deduce = True
+            elif abs(current_target[1] - opponent_unknown_ships[target_square-1][1]) >= 1 and not did_deduce:
+                vectors = ["up", "down"]
+                did_deduce = True
+ 
+        if not vectors:
+            vectors = ["up", "down", "left", "right"]
+            target_square += 1
+            did_deduce = False
+            continue
+ 
+        vector = random.choice(vectors)
+        match vector:      
+            case "up":
+                current_target[1] = current_target[1] - 1
+                if current_target[1] < 0:
+                    vectors.remove(vector)
+                    continue
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                return current_target[0], current_target[1] 
+            case "down":
+                current_target[1] = current_target[1] + 1
+                if current_target[1] > 9:
+                    vectors.remove(vector)
+                    continue
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                return current_target[0], current_target[1]   
+            case "left":
+                current_target[0] = current_target[0] - 1
+                if current_target[0] < 0:
+                    vectors.remove(vector)
+                    continue  
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                return current_target[0], current_target[1] 
+            case "right":
+                current_target[0] = current_target[0] + 1
+                if current_target[0] > 9:
+                    vectors.remove(vector)
+                    continue
+                if [current_target[0], current_target[1]] in opponent_shots_fired:
+                    vectors.remove(vector)
+                    continue
+                return current_target[0], current_target[1] 
+ 
+def computer_hard():
+    """This uses hunt and target algorithm combined with probability heatmap."""
+    
+    opponent_unknown_ships = copy.deepcopy(player_sunken_spaces)
 
     for coordinate in opponent_unknown_ships:
         if coordinate in opponent_known_ships:
             opponent_unknown_ships.remove(coordinate)
-
+ 
     for ship in player_ships:
         if not ship.afloat:
             for coordinate in ship.initial_coordinates:
@@ -346,78 +428,14 @@ def computer_medium():
                 if coordinate in opponent_unknown_ships:
                     opponent_unknown_ships.remove(coordinate)
 
-    while not opponent_unknown_ships:
-        print("using hunt")
-        xS, yS = random.randint(0, len(X_COORDINATES)-1), random.randint(0, len(Y_COORDINATES)-1)
-        if [xS, yS] in opponent_shots_fired:
-            continue
-        return xS, yS
-    
-    target_square = -1
-    while opponent_unknown_ships:
-        print(vectors)
-        print("using target")
-        current_target = copy.copy(opponent_unknown_ships[target_square])
-        print("initial target:")
-        print(current_target)
-        if not vectors:
-            vectors = ["up", "down", "left", "right"]
-            target_square += 1
-            continue
-        vector = random.choice(vectors)
-        match vector:
-            case "up":
-                print("checking up")
-                current_target[1] = current_target[1] - 1
-                if current_target[1] < 0:
-                    vectors.remove(vector)
-                    continue
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
-                    vectors.remove(vector)
-                    continue
-                print("calculated target:")
-                print(current_target)
-                return current_target[0], current_target[1] 
-            case "down":
-                print("checking down")
-                current_target[1] = current_target[1] + 1
-                if current_target[1] > 9:
-                    vectors.remove(vector)
-                    continue
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
-                    vectors.remove(vector)
-                    continue
-                print("calculated target:")
-                print(current_target)
-                return current_target[0], current_target[1]   
-            case "left":
-                print("checking left")
-                current_target[0] = current_target[0] - 1
-                if current_target[0] < 0:
-                    vectors.remove(vector)
-                    continue  
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
-                    vectors.remove(vector)
-                    continue
-                print("calculated target:")
-                print(current_target)
-                return current_target[0], current_target[1] 
-            case "right":
-                print("checking right")
-                current_target[0] = current_target[0] + 1
-                if current_target[0] > 9:
-                    vectors.remove(vector)
-                    continue
-                if [current_target[0], current_target[1]] in opponent_shots_fired:
-                    vectors.remove(vector)
-                    continue
-                print("calculated target:")
-                print(current_target)
-                return current_target[0], current_target[1] 
- 
-def computer_hard():
-    """This uses hunt and target algorithm combined with probability heatmap."""
-    pass
+    if opponent_unknown_ships:
+        computer_medium()
+    else:
+        heatmap = {}
+        for x in range(GRID_LENGTH):
+            for y in range(GRID_HEIGHT):
+                map.update({(x, y): 0})
+
  
 def computer_god():
     """This just shoots your ships down one by one. Why would anyone play that?"""
@@ -427,7 +445,7 @@ def computer_god():
         if player_occupied_spaces[attack] not in player_sunken_spaces:
             xS, yS = player_occupied_spaces[attack]
             return xS, yS
-
+ 
 def computer_move(x, y):
     global did_opponent_hit, player_sunken_spaces 
     slow_print("Computer shot on field {}.".format(X_COORDINATES[x]+str(y)))
@@ -440,10 +458,10 @@ def computer_move(x, y):
         slow_print("It's a miss!")
         opponent_shots_fired.append([x, y])
         did_opponent_hit = False
-
+ 
 def previously_hit(target):
     return True if target in opponent_shots_fired else False
-    
+ 
 def check_if_ship_sunk(ship_list, shots_fired):
     for ship in ship_list:
         for coordinate in ship.afloat_coordinates:
@@ -473,8 +491,8 @@ if __name__ == "__main__":
             column.append("o")        
         player_next_grid.append(column)
         opponent_next_grid.append(column)
-
-
+ 
+ 
     #slow_print(starting_message)
     #game_mode = select_mode()
     game_mode = "medium"
@@ -485,6 +503,6 @@ if __name__ == "__main__":
  
     while not game_over:
         game_round()
-        print(player_sunken_spaces)
     print("GOWNO KUWA")
     sys.exit()
+ 

@@ -15,6 +15,8 @@ def slow_print(text):
     for letter in text:
         if letter == ' ':
             print(letter, end = '')
+        elif letter in '.,-':
+            time.sleep(0.2)
         else:
             time.sleep(0.02)
             print(letter, end = '')
