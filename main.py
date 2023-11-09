@@ -492,10 +492,8 @@ if __name__ == "__main__":
         player_next_grid.append(column)
         opponent_next_grid.append(column)
  
- 
-    #slow_print(starting_message)
-    #game_mode = select_mode()
-    game_mode = "medium"
+    slow_print(starting_message)
+    game_mode = select_mode()
     computer_ship_distribution(opponent_occupied_spaces)
     update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, player_shots_fired, "player")
     slow_print("\nYou can enter one or both coordinates (without spaces) of ship at a time.")
@@ -503,6 +501,6 @@ if __name__ == "__main__":
  
     while not game_over:
         game_round()
-    print("GOWNO KUWA")
+    print("And the winner is{}".format{winner})
     sys.exit()
  
