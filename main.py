@@ -501,6 +501,6 @@ if __name__ == "__main__":
  
     while not game_over:
         game_round()
-    print("And the winner is{}".format{winner})
+    print("And the winner is{}".format(winner))
     sys.exit()
  
