@@ -543,6 +543,10 @@ if __name__ == "__main__":
  
     while not game_over:
         game_round()
+<<<<<<< HEAD
     print("And the winner is {}!".format(winner))
+=======
+    print("And the winner is{}".format(winner))
+>>>>>>> 57bf44815ac9d81384afc9c90b9995fcd5bf64f2
     sys.exit()
  
