@@ -87,6 +87,7 @@ def square_validator(move):
 def check_coordinates():
     move = ""
     move = input()
+    move = move.replace(" ","")
     if len(move) == 2:
         xA, yA, validA = square_validator(move)
         slow_print("Where do you want it to end?")
@@ -100,7 +101,7 @@ def check_coordinates():
         if validA and validB:      
             return xA, yA, xB, yB
         else:
-            slow_print("This is not a valid square. Try again.")
+            slow_print("This is not a valid square pair. Try again.")
             check_coordinates()
     else:
         slow_print("This is not a valid square. Try again.")
@@ -112,7 +113,7 @@ def player_ship_placement(ship_list):
         ship.pointA = [xA, yA]
         ship.pointB = [xB, yB]
         ship.is_horizontal = is_horizontal
-        update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, player_shots_fired, "player")
+        update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, player_shots_fired, "player", player_ships)
  
 def ship_placement_validator(ship):    
     slow_print("\n{} is {} spaces big.".format(ship.name, ship.size))
@@ -169,11 +170,11 @@ def check_collision(spaces, occupied_spaces):
             return False
     return True
  
-def update_grid(next_grid, occupied_spaces, sunken_spaces, shots_fired, grid_owner):
+def update_grid(next_grid, occupied_spaces, sunken_spaces, shots_fired, grid_owner, owner_ships):
     next_grid = []
-    for y in range(GRID_LENGTH): #  ???
+    for y in range(GRID_LENGTH): 
         column = []
-        for x in range(GRID_HEIGHT): # Why does it work with flipped x y?
+        for x in range(GRID_HEIGHT): # Why does it work with flipped x y?    
             if (x, y) in sunken_spaces:
                 column.append("!")
             elif (x, y) in occupied_spaces and grid_owner == "player":
@@ -182,6 +183,9 @@ def update_grid(next_grid, occupied_spaces, sunken_spaces, shots_fired, grid_own
                 column.append("X")
             else:
                 column.append("o")
+            for ship in owner_ships:
+                if not ship.afloat and (x, y) in ship.initial_coordinates:
+                    column[-1] = "S"
         next_grid.append(column)
     grid_printer(next_grid)
  
@@ -520,9 +524,9 @@ def game_round():
     computer_move(xS, yS)
     check_if_ship_sunk(player_ships, opponent_shots_fired)
     game_over = check_if_game_over()
-    update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, opponent_shots_fired, "player")
+    update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, opponent_shots_fired, "player", player_ships)
     print()
-    update_grid(opponent_next_grid, opponent_occupied_spaces, opponent_sunken_spaces, player_shots_fired, "opponent")
+    update_grid(opponent_next_grid, opponent_occupied_spaces, opponent_sunken_spaces, player_shots_fired, "opponent", opponent_ships)
  
 if __name__ == "__main__":
  
@@ -534,10 +538,10 @@ if __name__ == "__main__":
         opponent_next_grid.append(column)
  
  
-    slow_print(starting_message)
+    fast_print(starting_message)
     game_mode = select_mode()
     computer_ship_distribution(opponent_occupied_spaces)
-    update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, player_shots_fired, "player")
+    update_grid(player_next_grid, player_occupied_spaces, player_sunken_spaces, player_shots_fired, "player", player_ships)
     slow_print("\nYou can enter one or both coordinates (without spaces) of ship at a time.")
     player_ship_placement(player_ships)
  
